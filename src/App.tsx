@@ -8,36 +8,12 @@ import StatusBar from './components/StatusBar';
 import AIThinkingOverlay from './components/AIThinkingOverlay';
 import GameOverModal from './components/GameOverModal';
 
+// Initialize SDK once
+Arinova.init({ appId: 'gomoku' });
+
 export default function App() {
-  const { screen, setLogin, isAiThinking, gameOver, tickTimer } = useGameStore();
+  const { screen, isAiThinking, gameOver, tickTimer } = useGameStore();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Initialize SDK and handle callback
-  useEffect(() => {
-    Arinova.init({ appId: 'gomoku' });
-
-    // Check for OAuth callback
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    if (code) {
-      Arinova.handleCallback({
-        code,
-        clientId: 'gomoku',
-        redirectUri: window.location.origin,
-      } as Parameters<typeof Arinova.handleCallback>[0])
-        .then((result: { user: { id: string; name: string }; accessToken: string }) => {
-          setLogin(
-            { id: result.user.id, name: result.user.name },
-            result.accessToken
-          );
-          // Clean URL
-          window.history.replaceState({}, '', window.location.pathname);
-        })
-        .catch((err: unknown) => {
-          console.error('Auth callback failed:', err);
-        });
-    }
-  }, [setLogin]);
 
   // Timer
   useEffect(() => {

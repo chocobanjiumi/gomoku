@@ -1,7 +1,7 @@
 import { useGameStore } from '../stores/gameStore';
 import { BOARD_SIZE } from '../utils/gomoku';
 import { Arinova } from '@arinova-ai/spaces-sdk';
-import { buildAgentPrompt, parseAgentMove } from '../utils/agentPrompt';
+import { buildAgentPrompt, buildRetryPrompt, parseAgentMove } from '../utils/agentPrompt';
 import { useState } from 'react';
 
 const PADDING = 30;
@@ -42,20 +42,43 @@ export default function GameBoard() {
     triggerAiTurn();
   };
 
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const triggerAiTurn = async () => {
     setAiThinking(true);
+    setAiError(null);
     try {
       const currentState = useGameStore.getState();
       const prompt = buildAgentPrompt(currentState.board, currentState.moveHistory);
 
+      // First attempt
       const { response } = await Arinova.agent.chat({
         agentId: selectedAgent!.id,
         prompt,
         accessToken: accessToken!,
       });
 
-      const boardNow = useGameStore.getState().board;
-      const move = parseAgentMove(response, boardNow);
+      let boardNow = useGameStore.getState().board;
+      let move = parseAgentMove(response, boardNow);
+
+      // If first attempt failed, retry once with stricter prompt
+      if (!move) {
+        const retry = await Arinova.agent.chat({
+          agentId: selectedAgent!.id,
+          prompt: buildRetryPrompt(),
+          accessToken: accessToken!,
+        });
+        boardNow = useGameStore.getState().board;
+        move = parseAgentMove(retry.response, boardNow);
+      }
+
+      // If still no valid move, show error — do NOT random fallback
+      if (!move) {
+        setAiError('AI 無法決定落子位置，請重新開局或換一個 AI 對手。');
+        useGameStore.getState().setAiThinking(false);
+        return;
+      }
+
       const aiResult = useGameStore.getState().placeStone(move.row, move.col, 2);
 
       if (aiResult.win) {
@@ -65,15 +88,7 @@ export default function GameBoard() {
       }
     } catch (err) {
       console.error('AI move error:', err);
-      // Fallback: random move
-      const boardNow = useGameStore.getState().board;
-      const move = parseAgentMove('', boardNow);
-      const aiResult = useGameStore.getState().placeStone(move.row, move.col, 2);
-      if (aiResult.win) {
-        useGameStore.getState().setGameOver('ai', aiResult.winLine ?? undefined);
-      } else if (aiResult.draw) {
-        useGameStore.getState().setGameOver('draw');
-      }
+      setAiError('AI 連線失敗，請稍後再試。');
     } finally {
       useGameStore.getState().setAiThinking(false);
     }
@@ -106,6 +121,13 @@ export default function GameBoard() {
   };
 
   return (
+    <>
+    {aiError && (
+      <div className="ai-error-banner">
+        <span>{aiError}</span>
+        <button onClick={() => setAiError(null)}>✕</button>
+      </div>
+    )}
     <svg
       className="game-board-svg"
       viewBox={`0 0 ${BOARD_PX} ${BOARD_PX}`}
@@ -229,5 +251,6 @@ export default function GameBoard() {
         </radialGradient>
       </defs>
     </svg>
+    </>
   );
 }

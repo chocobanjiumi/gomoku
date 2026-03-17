@@ -36,18 +36,30 @@ export function buildBoardPrompt(board: Board, moveHistory: MoveRecord[]): strin
 
 export function buildAgentPrompt(board: Board, moveHistory: MoveRecord[]): string {
   const boardStr = buildBoardPrompt(board, moveHistory);
-  return `你是五子棋 AI，執白子(O)。以下是目前棋盤（X=黑/玩家, O=白/AI, .=空）：
+  return `你是五子棋 AI，執白子(O)。棋盤如下（X=黑/玩家, O=白/AI, .=空）：
 
 ${boardStr}
 
-請選擇下一步落子位置，只回覆 row,col 格式（例如 7,7）。不要加任何其他文字。`;
+規則：你必須且只能回覆一個合法落子座標，格式為 row,col（例如 7,7）。
+- 只輸出數字和逗號，不要有任何其他文字、解釋或標點
+- row 和 col 範圍是 0-14
+- 必須落在空位（.）上
+回覆：`;
 }
 
+export function buildRetryPrompt(): string {
+  return `格式錯誤。請只回覆 row,col（例如 7,7），不要有任何其他文字。回覆：`;
+}
+
+/**
+ * Parse agent response into a valid move.
+ * Returns null if parsing fails or the move is invalid (occupied/out of bounds).
+ * Does NOT fallback to random — caller decides what to do on null.
+ */
 export function parseAgentMove(
   response: string,
   board: Board
-): { row: number; col: number } {
-  // Try to extract row,col pattern
+): { row: number; col: number } | null {
   const patterns = [
     /(\d{1,2})\s*,\s*(\d{1,2})/,
     /(\d{1,2})\s+(\d{1,2})/,
@@ -65,38 +77,5 @@ export function parseAgentMove(
     }
   }
 
-  // Fallback: pick a random valid move
-  const validMoves: { row: number; col: number }[] = [];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[r][c] === 0) {
-        validMoves.push({ row: r, col: c });
-      }
-    }
-  }
-
-  if (validMoves.length === 0) {
-    return { row: 7, col: 7 }; // shouldn't happen
-  }
-
-  // Prefer moves near existing stones
-  const occupied: { row: number; col: number }[] = [];
-  for (let r = 0; r < BOARD_SIZE; r++) {
-    for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[r][c] !== 0) occupied.push({ row: r, col: c });
-    }
-  }
-
-  if (occupied.length > 0) {
-    const nearby = validMoves.filter((m) =>
-      occupied.some(
-        (o) => Math.abs(o.row - m.row) <= 2 && Math.abs(o.col - m.col) <= 2
-      )
-    );
-    if (nearby.length > 0) {
-      return nearby[Math.floor(Math.random() * nearby.length)];
-    }
-  }
-
-  return validMoves[Math.floor(Math.random() * validMoves.length)];
+  return null;
 }

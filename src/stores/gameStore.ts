@@ -20,6 +20,7 @@ interface GameState {
   screen: Screen;
   accessToken: string | null;
   user: UserInfo | null;
+  agents: AgentInfo[];
   selectedAgent: AgentInfo | null;
   board: Board;
   currentTurn: 'player' | 'ai';
@@ -32,7 +33,7 @@ interface GameState {
   lastMove: { row: number; col: number } | null;
 
   // Actions
-  setLogin: (user: UserInfo, accessToken: string) => void;
+  setLogin: (user: UserInfo, accessToken: string, agents: AgentInfo[]) => void;
   setScreen: (screen: Screen) => void;
   selectAgent: (agent: AgentInfo) => void;
   placeStone: (row: number, col: number, player: 1 | 2) => {
@@ -50,6 +51,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   screen: 'login',
   accessToken: null,
   user: null,
+  agents: [],
   selectedAgent: null,
   board: createEmptyBoard(),
   currentTurn: 'player',
@@ -61,7 +63,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   timer: { player: 0, ai: 0 },
   lastMove: null,
 
-  setLogin: (user, accessToken) => set({ user, accessToken, screen: 'agent-select' }),
+  setLogin: (user, accessToken, agents) => set({ user, accessToken, agents, screen: 'agent-select' }),
 
   setScreen: (screen) => set({ screen }),
 

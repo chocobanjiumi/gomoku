@@ -598,3 +598,24 @@ body {
     gap: 16px;
   }
 }
+
+/* ===== AI Error Banner ===== */
+.ai-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(220, 50, 50, 0.9);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.ai-error-banner button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 12px;
+}
